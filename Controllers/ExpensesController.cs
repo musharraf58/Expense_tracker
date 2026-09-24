@@ -19,7 +19,7 @@ public class ExpensesController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
-        var expenses = await _context.Expenses.ToListAsync();
+        var expenses = await _context.Expenses.Include(e => e.Category).ToListAsync();
 
         return Ok(expenses);
     }
@@ -27,7 +27,7 @@ public class ExpensesController : ControllerBase
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id)
     {
-        var expense = await _context.Expenses.FindAsync(id);
+        var expense = await _context.Expenses.Include(e => e.Category).FirstOrDefaultAsync(e => e.Id == id);
 
         if (expense is null)
         {
