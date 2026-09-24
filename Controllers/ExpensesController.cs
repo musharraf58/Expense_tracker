@@ -1,8 +1,6 @@
-using ExpenseTracker.Data;
 using ExpenseTracker.DTOs;
-using ExpenseTracker.Models;
+using ExpenseTracker.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace ExpenseTracker.Controllers;
 
@@ -10,36 +8,49 @@ namespace ExpenseTracker.Controllers;
 [Route("api/[controller]")]
 public class ExpensesController : ControllerBase
 {
-    private readonly AppDbContext _context;
+    private readonly IExpenseService _service;
 
-    public ExpensesController(AppDbContext context)
+    public ExpensesController(IExpenseService service)
     {
-        _context = context;
+        _service = service;
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll(int? categoryId)
+public async Task<IActionResult> GetAll(
+    int? categoryId,
+    DateTime? from,
+    DateTime? to,
+    string? sortBy,
+    bool descending = false,
+    int page = 1,
+    int pageSize = 10)
+{
+    if (page < 1)
     {
-        var query = _context.Expenses
-            .Include(e => e.Category)
-            .AsQueryable();
-
-        if (categoryId.HasValue)
-        {
-            query = query.Where(e => e.CategoryId == categoryId.Value);
-        }
-
-        var expenses = await query.ToListAsync();
-
-        return Ok(expenses);
+        return BadRequest("Page must be greater than 0.");
     }
+
+    if (pageSize < 1 || pageSize > 100)
+    {
+        return BadRequest("Page size must be between 1 and 100.");
+    }
+
+    var expenses = await _service.GetAllAsync(
+        categoryId,
+        from,
+        to,
+        sortBy,
+        descending,
+        page,
+        pageSize);
+
+    return Ok(expenses);
+}
 
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id)
     {
-        var expense = await _context.Expenses
-            .Include(e => e.Category)
-            .FirstOrDefaultAsync(e => e.Id == id);
+        var expense = await _service.GetByIdAsync(id);
 
         if (expense is null)
         {
@@ -52,16 +63,7 @@ public class ExpensesController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create(ExpenseDto dto)
     {
-        var expense = new Expense
-        {
-            Amount = dto.Amount,
-            Description = dto.Description,
-            Date = dto.Date,
-            CategoryId = dto.CategoryId
-        };
-
-        _context.Expenses.Add(expense);
-        await _context.SaveChangesAsync();
+        var expense = await _service.CreateAsync(dto);
 
         return Created($"/api/expenses/{expense.Id}", expense);
     }
@@ -69,19 +71,12 @@ public class ExpensesController : ControllerBase
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, ExpenseDto dto)
     {
-        var expense = await _context.Expenses.FindAsync(id);
+        var expense = await _service.UpdateAsync(id, dto);
 
         if (expense is null)
         {
             return NotFound();
         }
-
-        expense.Amount = dto.Amount;
-        expense.Description = dto.Description;
-        expense.Date = dto.Date;
-        expense.CategoryId = dto.CategoryId;
-
-        await _context.SaveChangesAsync();
 
         return Ok(expense);
     }
@@ -89,16 +84,21 @@ public class ExpensesController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
-        var expense = await _context.Expenses.FindAsync(id);
+        var deleted = await _service.DeleteAsync(id);
 
-        if (expense is null)
+        if (!deleted)
         {
             return NotFound();
         }
 
-        _context.Expenses.Remove(expense);
-        await _context.SaveChangesAsync();
-
         return NoContent();
+    }
+
+    [HttpGet("summary")]
+    public async Task<IActionResult> GetSummary()
+    {
+        var summary = await _service.GetSummaryAsync();
+
+        return Ok(summary);
     }
 }
