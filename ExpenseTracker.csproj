@@ -5,6 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>84f87b87-c6ef-4c5a-a1ad-f1331c600646</UserSecretsId>
+    <DefaultItemExcludes>$(DefaultItemExcludes);ExpenseTracker.Tests/**/*</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
