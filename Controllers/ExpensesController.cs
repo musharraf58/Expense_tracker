@@ -1,4 +1,5 @@
 using ExpenseTracker.Data;
+using ExpenseTracker.DTOs;
 using ExpenseTracker.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -17,9 +18,18 @@ public class ExpensesController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll(int? categoryId)
     {
-        var expenses = await _context.Expenses.Include(e => e.Category).ToListAsync();
+        var query = _context.Expenses
+            .Include(e => e.Category)
+            .AsQueryable();
+
+        if (categoryId.HasValue)
+        {
+            query = query.Where(e => e.CategoryId == categoryId.Value);
+        }
+
+        var expenses = await query.ToListAsync();
 
         return Ok(expenses);
     }
@@ -27,7 +37,9 @@ public class ExpensesController : ControllerBase
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id)
     {
-        var expense = await _context.Expenses.Include(e => e.Category).FirstOrDefaultAsync(e => e.Id == id);
+        var expense = await _context.Expenses
+            .Include(e => e.Category)
+            .FirstOrDefaultAsync(e => e.Id == id);
 
         if (expense is null)
         {
@@ -38,8 +50,16 @@ public class ExpensesController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create(Expense expense)
+    public async Task<IActionResult> Create(ExpenseDto dto)
     {
+        var expense = new Expense
+        {
+            Amount = dto.Amount,
+            Description = dto.Description,
+            Date = dto.Date,
+            CategoryId = dto.CategoryId
+        };
+
         _context.Expenses.Add(expense);
         await _context.SaveChangesAsync();
 
@@ -47,7 +67,7 @@ public class ExpensesController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(int id, Expense updatedExpense)
+    public async Task<IActionResult> Update(int id, ExpenseDto dto)
     {
         var expense = await _context.Expenses.FindAsync(id);
 
@@ -56,9 +76,10 @@ public class ExpensesController : ControllerBase
             return NotFound();
         }
 
-        expense.Amount = updatedExpense.Amount;
-        expense.Description = updatedExpense.Description;
-        expense.Date = updatedExpense.Date;
+        expense.Amount = dto.Amount;
+        expense.Description = dto.Description;
+        expense.Date = dto.Date;
+        expense.CategoryId = dto.CategoryId;
 
         await _context.SaveChangesAsync();
 
