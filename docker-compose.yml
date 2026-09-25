@@ -11,5 +11,15 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  api:
+    build: .
+    container_name: expense_tracker_api
+    environment:
+      ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=expense_tracker;Username=postgres;Password=postgres"
+    ports:
+      - "8081:8080"
+    depends_on:
+      - db
+
 volumes:
   postgres_data:
