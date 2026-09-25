@@ -1,12 +1,22 @@
+using Microsoft.AspNetCore.Mvc.Testing;
 using Xunit;
 
 namespace ExpenseTracker.Tests;
 
-public class UnitTest1
+public class ExpenseApiTests : IClassFixture<WebApplicationFactory<Program>>
 {
-    [Fact]
-    public void Test1()
+    private readonly HttpClient _client;
+
+    public ExpenseApiTests(WebApplicationFactory<Program> factory)
     {
-        Assert.True(true);
+        _client = factory.CreateClient();
+    }
+
+    [Fact]
+    public async Task GetExpenses_ReturnsSuccess()
+    {
+        var response = await _client.GetAsync("/api/expenses");
+
+        Assert.True(response.IsSuccessStatusCode);
     }
 }
